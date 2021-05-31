@@ -7,10 +7,20 @@ namespace MikrotikUtils
 {
 	public class MicrotikClient
 	{
+		private ITikConnection connection;
 		private string Ip { get; }
 		private string Password { get; }
-		public ITikConnection Connection { get; set; }
-
+		public ITikConnection Connection
+		{
+			get
+			{
+				if (connection == null)
+				{
+					connection = ConnectionFactory.OpenConnection(TikConnectionType.Api, Ip, "port", Password);
+				}
+				return connection;
+			}
+		}
 
 		public MicrotikClient(string ip, string password)
 		{
@@ -18,41 +28,20 @@ namespace MikrotikUtils
 			Password = password;
 		}
 
-		public void CreateConnection()
-		{
-			Connection = ConnectionFactory.OpenConnection(TikConnectionType.Api, Ip, "port", Password);
-		}
-
-		public void RemoveIpAddressFromList()
+		public IEnumerable<ITikSentence> RemoveIpAddressFromList(string ipAddress)
 		{
 			string[] commands = new string[] {
 				"/ip/firewall/address-list/print",
 				"?list=BlackList",
 				//"=.proplist=address"
             };
-			IEnumerable<ITikSentence> result = Connection.CallCommandSync(commands);
-			Print(result);
-		}
 
-		public void OpenPort()
-		{
-			Console.WriteLine("Введите IP");
-			string ipAddress = Console.ReadLine();
-
-
-			Console.WriteLine("Введите IP или введите 0 для автоопределения IP");
-			string ip = Console.ReadLine();
-			if (ip == "0")
-			{
-				ip = GetIp().ToString();
+			var result = Connection.CallCommandSync(commands);
+			return result;
 			}
 
-			Console.WriteLine("Введите внутренний порт");
-			string internalPort = Console.ReadLine();
-
-			Console.WriteLine("Введите внешний порт");
-			string externalPort = Console.ReadLine();
-
+		public IEnumerable<ITikSentence> OpenPort(string ipAddress, string internalPort, string externalPort, string comment = default)
+		{
 			string[] commands = new string[] {
 				"/ip/firewall/nat/add",
 				"=chain=dstnat",
