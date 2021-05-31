@@ -49,16 +49,16 @@ namespace MikrotikUtils
 				"=in-interface=ether1-gateway",
 				"=protocol=tcp",
 				string.Format("=dst-port={0}", externalPort),
-				string.Format("=to-addresses={0}", ip),
-				string.Format("=to-ports={0}", internalPort)
+				string.Format("=to-addresses={0}", ipAddress),
+				string.Format("=to-ports={0}", internalPort),
+				string.Format("=comment={0}", comment)
 			};
 
-			IEnumerable<ITikSentence> result = Connection.CallCommandSync(commands);
-
-			Print(result);
+			var result = Connection.CallCommandSync(commands);
+			return result;
 		}
 
-		private void Print(IEnumerable<ITikSentence> result)
+		public void Print(IEnumerable<ITikSentence> result)
 		{
 			foreach (ITikSentence sentence in result)
 			{
