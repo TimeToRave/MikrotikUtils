@@ -9,6 +9,7 @@ namespace MikrotikUtils
 	{
 		private ITikConnection connection;
 		private string Ip { get; }
+		private string Login { get; }
 		private string Password { get; }
 		public ITikConnection Connection
 		{
@@ -16,23 +17,36 @@ namespace MikrotikUtils
 			{
 				if (connection == null)
 				{
-					connection = ConnectionFactory.OpenConnection(TikConnectionType.Api, Ip, "port", Password);
+					connection = ConnectionFactory.OpenConnection(TikConnectionType.Api, Ip, Login, Password);
 				}
 				return connection;
 			}
 		}
 
-		public MicrotikClient(string ip, string password)
+		/// <summary>
+		/// Основной конструктор
+		/// </summary>
+		/// <param name="ip">IP-адрес устройства</param>
+		/// <param name="username">Логин</param>
+		/// <param name="password">Пароль</param>
+		public MicrotikClient(string ip, string login, string password)
 		{
 			Ip = ip;
+			Login = login;
 			Password = password;
 		}
 
-		public IEnumerable<ITikSentence> RemoveIpAddressFromList(string ipAddress)
+		/// <summary>
+		/// Выполняет удаление IP адреса из списка адресов
+		/// </summary>
+		/// <param name="ipAddress">Удаляемый адрес</param>
+		/// <param name="addressListName">Название списка</param>
+		/// <returns>Результат выполнения команд</returns>
+		public IEnumerable<ITikSentence> RemoveIpAddressFromList(string ipAddress, string addressListName)
 		{
 			string[] commands = new string[] {
 				"/ip/firewall/address-list/print",
-				"?list=BlackList",
+				string.Format("?list={0}", addressListName),
 				//"=.proplist=address"
             };
 
@@ -40,6 +54,14 @@ namespace MikrotikUtils
 			return result;
 			}
 
+		/// <summary>
+		/// Создает правилол проброса портов
+		/// </summary>
+		/// <param name="ipAddress">IP адрес компьютера внутри сети</param>
+		/// <param name="internalPort">Внутренний порт</param>
+		/// <param name="externalPort">Внешний порт</param>
+		/// <param name="comment">Коментарий к создаваемому правилу</param>
+		/// <returns></returns>
 		public IEnumerable<ITikSentence> OpenPort(string ipAddress, string internalPort, string externalPort, string comment = default)
 		{
 			string[] commands = new string[] {
@@ -58,33 +80,36 @@ namespace MikrotikUtils
 			return result;
 		}
 
-		public void Print(IEnumerable<ITikSentence> result)
+		/// <summary>
+		/// Формирует строку - результат выполнения команд
+		/// </summary>
+		/// <param name="result"></param>
+		public string Print(IEnumerable<ITikSentence> commandsExecutionResult)
 		{
-			foreach (ITikSentence sentence in result)
+			string resultString = default;
+
+
+			foreach (ITikSentence sentence in commandsExecutionResult)
 			{
 				if (sentence is ITikTrapSentence)
-					Console.WriteLine("Сообщение об ошибке: {0}", ((ITikTrapSentence)sentence).Message);
+					resultString += string.Format("Сообщение об ошибке: {0}\n", ((ITikTrapSentence)sentence).Message);
 				else if (sentence is ITikDoneSentence)
-					Console.WriteLine("Команда выполнена");
+					resultString += "Команда выполнена\n";
 				else if (sentence is ITikReSentence)
 				{
+
 					foreach (var wordPair in sentence.Words)
 					{
-						Console.WriteLine("  {0}={1}", wordPair.Key, wordPair.Value);
+						resultString += string.Format("  {0} = {1}\n", wordPair.Key, wordPair.Value);
 					}
 				}
 				else
+				{
 					throw new NotImplementedException("Неизвестная команда");
 			}
 		}
 
-		private IPAddress GetIp()
-		{
-			String host = System.Net.Dns.GetHostName();
-			// Получение ip-адреса.
-			IPAddress ip = System.Net.Dns.GetHostByName(host).AddressList[0];
-			return ip;
-
+			return resultString;
 		}
 	}
 
